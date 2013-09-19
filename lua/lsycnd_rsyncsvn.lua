@@ -1,4 +1,4 @@
-lsyncd.rsyncsvn = {}
+rsyncsvn = {}
 
 local function run_sync (inlet, event, src, host, target)
 	local dst = host .. ':' .. target
@@ -7,7 +7,7 @@ local function run_sync (inlet, event, src, host, target)
 	spawn(
 		event,
 		'/usr/bin/rsync',
-		'-av',
+		'-a',
 		src .. "/db/current",
 		dst .. "/db/current"
 	)
@@ -18,7 +18,7 @@ local function run_sync (inlet, event, src, host, target)
 	spawn(
 		event,
 		'/usr/bin/rsync',
-		'-av',
+		'-a',
 		'--exclude', 'db/current',
 		'--exclude', 'db/transactions/*',
 		'--exclude', 'db/log.*',
@@ -26,18 +26,25 @@ local function run_sync (inlet, event, src, host, target)
 	)
 end
 
-lsycnd.rsyncsvn = {
-        delay = 3,
-        init = function(event)
-                local config    = event.config
-		local inlet	= event.inlet
-                log('Normal', 'Initial SVN sync ' .. config.source .. ' -> ' .. config.host)
-       		run_sync(inlet, event, config.source, config.host, config.target)
-	end,
-        action = function(inlet)
-                local config    = inlet.getConfig()
-                local elist     = inlet.getEvents()
-                log('Normal', 'Sync SVN ' .. config.source .. ' -> ' .. config.host)
-		run_sync(inlet, elist, config.source, config.host, config.target)
-        end
-}
+rsyncsvn.delay = 3
+
+--
+-- startup method
+--
+rsyncsvn.init = function(event)
+    local config    = event.config
+    local inlet	= event.inlet
+    log('Normal', 'Initial svn sync: ' .. config.source .. ' -> ' .. config.host)
+    run_sync(inlet, event, config.source, config.host, config.target)
+end
+
+
+--
+-- method to be run on each action
+--
+rsyncsvn.action = function(inlet)
+    local config    = inlet.getConfig()
+    local elist     = inlet.getEvents()
+    log('Normal', 'Syncing svn repo: ' .. config.source .. ' -> ' .. config.host)
+    run_sync(inlet, elist, config.source, config.host, config.target)
+end
